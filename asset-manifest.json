@@ -1,0 +1,10 @@
+{
+  "runtime~main.js": "/dapp-dashboard/static/js/runtime~main.47f4b79a.js",
+  "runtime~main.js.map": "/dapp-dashboard/static/js/runtime~main.47f4b79a.js.map",
+  "vendors.js": "/dapp-dashboard/static/js/vendors.0122f292.chunk.js",
+  "vendors.js.map": "/dapp-dashboard/static/js/vendors.0122f292.chunk.js.map",
+  "main.css": "/dapp-dashboard/static/css/main.944a0c1a.chunk.css",
+  "main.js": "/dapp-dashboard/static/js/main.d46dd992.chunk.js",
+  "main.js.map": "/dapp-dashboard/static/js/main.d46dd992.chunk.js.map",
+  "index.html": "/dapp-dashboard/index.html"
+}
