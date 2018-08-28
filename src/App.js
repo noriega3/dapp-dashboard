@@ -18,7 +18,6 @@ const TOKEN_API = '97JCGNIUANRCGTMSG3JZMHH2E8FI4FRYM1'
 const CONTRACT_ADDR = '0x3430d3fc79e35f33bb69c4a0b4b89bc9ee107897'
 const ethAPI = new Etherscan.init(TOKEN_API, 'kovan', 3000)
 const web3Api = new Web3(Web3.givenProvider || "http://localhost:8545");
-let globalBalance, vaultBalance
 
 /*
  () Allow the user to deposit.
@@ -33,42 +32,48 @@ export const getAccountAddr = async () => {
     return accounts[0]
 }
 
-export const getData = async () => {
-    let accountId = await getAccountAddr()
-    let balance = await ethAPI.account.balance(accountId);
-    let walletBalance = balance.result
-    let abiArr = await ethAPI.contract.getabi(CONTRACT_ADDR);
-    let MyContract
-
-    abiArr = await JSON.parse(abiArr.result)
-    MyContract = new web3Api.eth.Contract(abiArr, CONTRACT_ADDR);
-    vaultBalance = await MyContract.methods.balanceOf(accountId).call({from: accountId})
-
-    return { accountId, walletBalance, vaultBalance}
+export const getWalletBalance = async (accountId) => {
+    return await ethAPI.account.balance(accountId);
 }
 
+export const getContractInstance = async () => {
+    let abiArr = await ethAPI.contract.getabi(CONTRACT_ADDR);
+    abiArr = await JSON.parse(abiArr.result)
+    return new web3Api.eth.Contract(abiArr, CONTRACT_ADDR);
+}
+
+export const getContractBalanceUser = async (instance, accountId) => {
+    return await instance.methods.balanceOf(accountId).call({from: accountId})
+}
 
 class App extends Component {
     constructor(props){
         super(props)
         this.state = {
+            vaultAddr: CONTRACT_ADDR,
             walletAddr: -1,
             walletBalance: 0,
-            vaultAddr: CONTRACT_ADDR,
             vaultBalance: 0,
         }
+
     }
 
     async componentDidMount(){
+        try {
+            const walletAddr = await getAccountAddr()
+            const walletBalance = await getWalletBalance(walletAddr)
+            const vaultInstance = await getContractInstance()
+            const vaultBalance = await getContractBalanceUser(vaultInstance, walletAddr)
 
-        const {accountId, walletBalance, vaultBalance} = await getData()
+            this.setState({
+                walletAddr: walletAddr,
+                walletBalance: walletBalance,
+                vaultBalance: vaultBalance
+            })
 
-        this.setState({
-            walletAddr: accountId,
-            walletBalance: walletBalance,
-            vaultBalance: vaultBalance
-        })
-
+        } catch(err){
+            console.log(err)
+        }
     }
 
   render() {
@@ -77,6 +82,12 @@ class App extends Component {
           <Appbar />
           <Container>
               <Row>
+                  <Col md="12">
+                      <Input label={"Wallet Address"} value={this.state.walletAddr} disabled/>
+                      <Input label={"Vault Address"} value={this.state.vaultAddr} disabled/>
+                  </Col>
+              </Row>
+              <Row>
                   <Col md="6">
                       <WithdrawalForm />
                       <DepositForm />
@@ -84,11 +95,9 @@ class App extends Component {
                   <Col md="6">
                       <Tabs onChange={this.onChange} defaultSelectedIndex={0}>
                           <Tab value="pane-1" label="Vault" onActive={this.onActive}>
-                              <div>Address: {this.state.vaultAddr}</div>
                               <div>Balance: {this.state.vaultBalance}</div>
                           </Tab>
                           <Tab value="pane-2" label="Wallet">
-                              <div>Address: {this.state.walletAddr}</div>
                               <div>Balance: {this.state.walletBalance}</div>
                           </Tab>
                       </Tabs>
@@ -156,8 +165,9 @@ class TransactionsList extends Component {
         }
     }
     async componentDidMount(){
+        const vaultInstance = await getContractInstance()
 
-        let logs = await web3Api.eth.getPastLogs({
+        let logs = await vaultInstance.getPastEvents("allEvents", {
             address: this.props.address,
             fromBlock: 'earliest',
             topics: [['0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364', '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c']]
@@ -183,9 +193,33 @@ class TransactionsList extends Component {
         }, this.onWithdrawl)*/
     }
     render() {
+
+        const isDeposit = (type) => _.isEqual(type, 'Deposit')
+        const isWithdraw = (type) => _.isEqual(type, 'Withdraw')
         return (
             <Panel>
-                {this.state.logs}
+                <table className="mui-table">
+                    <thead>
+                    <tr>
+                        <th>Block #</th>
+                        <th>From</th>
+                        <th>Event</th>
+                        <th>To</th>
+                        <th>Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {this.state.messages.map(({address, blockNumber, returnValues: {amount, user}, event, id}) => {
+                        return(<tr key={id}>
+                            <td>{blockNumber}</td>
+                            <td>{isDeposit(event) ? user : isWithdraw(event) ? address : 'n/a'}</td>
+                            <td>{event}</td>
+                            <td>{isDeposit(event) ? address : isWithdraw(event) ? user : 'n/a'}</td>
+                            <td>{amount}</td>
+                        </tr>)
+                    })}
+                    </tbody>
+                </table>
             </Panel>
         );
     }
