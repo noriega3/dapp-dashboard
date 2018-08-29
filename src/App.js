@@ -38,25 +38,52 @@ export const getWalletBalance = async (accountId) => {
     return data.result;
 }
 
-export const getContractInstance = async () => {
-    let abiArr = await ethAPI.contract.getabi(CONTRACT_ADDR);
-    abiArr = await JSON.parse(abiArr.result)
-    return new web3Api.eth.Contract(abiArr, CONTRACT_ADDR);
+export const getContractInstance = async (contractAddr) => {
+    let abiArr
+    try{
+        abiArr = await ethAPI.contract.getabi(contractAddr);
+        abiArr = await JSON.parse(abiArr.result)
+    } catch (err) {
+        throw err
+    }
+    return new web3Api.eth.Contract(abiArr, contractAddr);
 }
 
-export const getContractBalanceUser = async (instance, accountId) => {
+export const getContractBalance = async (instance, accountId) => {
     return await instance.methods.balanceOf(accountId).call({from: accountId})
 }
 
 export const setContractDeposit = async (instance, accountId, amount) => {
-    console.log(instance.methods)
-    return await instance.methods.deposit(amount).call({from: accountId})
+    console.log(amount)
+    let result = await instance.methods.deposit().send({from: accountId, value: amount}, function(error, res){
+        console.log(error);
+        console.log(res);
+    });
+
+    console.log(result)
+    return result
 }
 
 export const setContractWithdraw = async (instance, accountId, amount) => {
-    console.log(instance.methods)
-    return await instance.methods.withdraw(amount).call({from: accountId})
+    console.log(amount)
+    //let result = await instance.methods.withdraw(amount).call({from: accountId})
+    let result = await instance.methods.withdraw(amount).send({from: accountId}, function(error, res){
+            console.log(error);
+            console.log(res);
+    });
+    console.log(result)
+    return result
 }
+
+export const getContractLogs = async (instance, address) => {
+    let logs = await instance.getPastEvents("allEvents", {
+        address: address,
+        fromBlock: 'earliest',
+        topics: [['0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364', '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c']] //TODO: make more dynamic so we can set these via a provider or wrapper component
+    })
+    return logs
+}
+
 class App extends Component {
     constructor(props){
         super(props)
@@ -64,44 +91,83 @@ class App extends Component {
             vaultAddr: CONTRACT_ADDR,
             walletAddr: -1,
             walletBalance: 0,
-            vaultBalance: 0
+            vaultBalance: 0,
+            hasError: false,
         }
 
+        this.contractInstance = getContractInstance(CONTRACT_ADDR)
         this.handleWalletChange = this.handleWalletChange.bind(this)
-        this.performDeposit = this.performDeposit.bind(this)
-        this.performWithdraw = this.performWithdraw.bind(this)
+        this.performVaultDeposit = this.performVaultDeposit.bind(this)
+        this.performVaultWithdraw = this.performVaultWithdraw.bind(this)
+        this.performSearch = this.performSearch.bind(this)
+        this.performGetLogs = this.performGetLogs.bind(this)
     }
 
-    async componentDidMount(){
-        this.contractInstance = await getContractInstance()
-
+    componentDidCatch(error, info) {
+        // Display fallback UI
+        this.setState({ hasError: true, errMessage: error });
     }
 
     componentWillUnmount(){
         this.contractInstance = null
     }
     async handleWalletChange(walletId){
+        let instance = await this.contractInstance
         let walletBalance = await getWalletBalance(walletId)
-        let vaultBalance = await getContractBalanceUser(this.contractInstance, walletId)
+        let vaultBalance = await getContractBalance(instance, walletId)
+
+        walletBalance = parseInt(walletBalance)
+        vaultBalance = parseInt(vaultBalance)
+
         this.setState({walletAddr: walletId, walletBalance, vaultBalance})
     }
 
-    async performWithdraw(amount){
+    async performVaultWithdraw(amount){
         const {walletAddr} = this.state
-        let result = await setContractWithdraw(this.contractInstance, walletAddr, amount)
+        let instance = await this.contractInstance
+        let result = await setContractWithdraw(instance, walletAddr, amount)
         console.log('result', result)
         this.setState((prevState) => ({walletBalance: prevState.walletBalance+amount, vaultBalance: prevState.vaultBalance-amount}))
     }
 
-    async performDeposit(amount){
+    async performVaultDeposit(amount){
         const {walletAddr} = this.state
-        let result = await setContractDeposit(this.contractInstance, walletAddr, amount)
-        console.log('result', result)
 
-        this.setState((prevState) => ({walletBalance: prevState.walletBalance-amount, vaultBalance: prevState.vaultBalance+amount}))
+        try {
+            let instance = await this.contractInstance
+            let result = await setContractDeposit(instance, walletAddr, amount)
+            console.log('result', result)
+            this.setState((prevState) => ({walletBalance: prevState.walletBalance-amount, vaultBalance: prevState.vaultBalance+amount}))
+        } catch(err){
+            this.setState({hasError: true, errMessage: err.toString()})
+        }
+    }
+
+    async performSearch(address){
+        let instance = await this.contractInstance
+        let result = await getContractBalance(instance, address)
+        return result
+    }
+
+    async performGetLogs(){
+        let instance = await this.contractInstance
+        console.log(instance)
+        let res = await instance.getPastEvents("allEvents", {
+            address: this.props.address,
+            fromBlock: 'earliest',
+            topics: [['0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364', '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c']] //TODO: make more dynamic so we can set these via a provider or wrapper component
+        })
+        res = _.sortBy(res, ['blockNumber']).reverse()
+
+        return res
     }
 
   render() {
+        if(this.state.hasError){
+            return (
+                <Panel> Error: {this.state.errMessage}</Panel>
+            )
+        }
     return (
       <div className="App">
           <Appbar />
@@ -113,10 +179,10 @@ class App extends Component {
               </Row>
               <Row>
                   <Col xl="4" xl-offset={2} lg={6}>
-                      <DepositOptions address={this.state.walletAddr} balance={this.state.walletBalance} onSubmit={this.performDeposit}/>
+                      <DepositOptions address={this.state.walletAddr} balance={this.state.walletBalance} onSubmit={this.performVaultDeposit}/>
                   </Col>
                   <Col xl="4" lg={6}>
-                      <WithdrawOptions address={this.state.vaultAddr} balance={this.state.vaultBalance} onSubmit={this.performWithdraw}/>
+                      <WithdrawOptions address={this.state.vaultAddr} balance={this.state.vaultBalance} onSubmit={this.performVaultWithdraw}/>
                   </Col>
               </Row>
           </Container>
@@ -124,7 +190,7 @@ class App extends Component {
         <Container>
             <Row>
                 <Col xl="8" xl-offset={2} lg={12}>
-                    <SearchBalance />
+                    <SearchBalance searchFunc={this.performSearch}/>
                 </Col>
             </Row>
         </Container>
@@ -132,7 +198,7 @@ class App extends Component {
           <Container>
           <Row>
               <Col xl="8" xl-offset={2} lg={12}>
-                  <TransactionsList address={this.state.vaultAddr} />
+                  <TransactionsList address={this.state.vaultAddr} logsFunc={this.performGetLogs}/>
               </Col>
 
           </Row>
@@ -162,14 +228,6 @@ class SearchBalance extends Component {
         this.onInputChange = _.debounce(this.onInputChange,1000);
     }
 
-    async componentDidMount(){
-        this.contractInstance = await getContractInstance()
-    }
-
-    componentWillUnmount(){
-        this.contractInstance = null
-    }
-
     handleClick(event){
         event.preventDefault()
 
@@ -181,7 +239,7 @@ class SearchBalance extends Component {
 
         this.setState({searched:false, searching: true}, async () => {
             try {
-                let balance = await getContractBalanceUser(this.contractInstance, this.state.address)
+                let balance = await this.props.searchFunc(this.state.address)
                 this.setState({balance, searched:true, searching: false})
             } catch(err) {
                 this.setState({balance: 0, searched:false, searching: false, invalid: err.toString()})
@@ -391,31 +449,8 @@ class TransactionsList extends Component {
         }
     }
     async componentDidMount(){
-        const vaultInstance = await getContractInstance()
-
-        let logs = await vaultInstance.getPastEvents("allEvents", {
-            address: this.props.address,
-            fromBlock: 'earliest',
-            topics: [['0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364', '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c']] //TODO: make more dynamic so we can set these via a provider or wrapper component
-        })
-        logs = _.sortBy(logs, ['blockNumber']).reverse()
-
+        let logs = await this.props.logsFunc()
         this.setState({messages: logs})
-
-        //Subscriptions do not currently work with metamask
-/*        this.subDeposit = web3Api.eth.subscribe('logs', {
-            address: this.props.vaultAddr,
-            topics: [
-                '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c',
-            ],
-        }, this.onDeposit)
-
-        this.subWithdraw = web3Api.eth.subscribe('logs', {
-            address: this.props.vaultAddr,
-            topics: [
-                '0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364',
-            ],
-        }, this.onWithdrawl)*/
     }
     render() {
 
