@@ -21,6 +21,82 @@
 .App-intro {
   font-size: large;
 }
+.copy {
+  cursor: pointer;
+}
+.copy span{
+   display:inline-block;
+   max-width:200px;
+   white-space:nowrap;
+   overflow:hidden;
+   text-overflow:ellipsis;
+   vertical-align: middle;
+}
+.copy i{
+  display:inline-block;
+  vertical-align: middle;
+}
+.overflowList{
+  overflow: auto;
+  max-height: 40em;
+}
+.logMessage .fas{
+  font-size: 3em;
+}
+
+.logMessage .middleContent{
+  text-align:left;
+}
+
+.logMessage .amount{
+  text-align:right;
+  font-weight: bold;
+}
+
+.positiveColor{
+  color: #1B5E20;
+}
+
+.negativeColor{
+  color: #D50000;
+}
+
+
+.logMessage.positiveColor.mui-panel{
+  background: #F1F8E9;
+}
+
+.logMessage.negativeColor.mui-panel{
+  background: #FFEBEE;
+
+}
+.vaultTransactionsPanel{
+  text-align: left;
+}
+
+.vaultTransactionsPanel .footer{
+  text-align: left;
+}
+.optionsPanel div{
+    text-align:left;
+}
+.optionsPanel .icon{
+    text-align:center;
+    font-size: 4em;
+}
+
+.optionsPanel .mui--text-caption,
+.optionsPanel .actions{
+    text-align:right;
+}
+
+.searchButton .fas{
+    font-size: 1em;
+}
+
+.mui--text-danger.mui--text-caption{
+    text-align:left;
+}
 
 @keyframes App-logo-spin {
   from { transform: rotate(0deg); }
