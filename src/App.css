@@ -1,25 +1,8 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 80px;
-}
-
 .App-header {
   background-color: #222;
   height: 150px;
   padding: 20px;
   color: white;
-}
-
-.App-title {
-  font-size: 1.5em;
-}
-
-.App-intro {
-  font-size: large;
 }
 .copy {
   cursor: pointer;
@@ -85,6 +68,10 @@
     font-size: 4em;
 }
 
+.optionsPanel .mui--text-headline,
+.optionsPanel .mui-form.mui-form--inline{
+    text-align:center;
+}
 .optionsPanel .mui--text-caption,
 .optionsPanel .actions{
     text-align:right;
@@ -98,7 +85,15 @@
     text-align:left;
 }
 
-@keyframes App-logo-spin {
+.balance button {
+    padding: 0 7px;
+}
+
+.dashboard.api-updating i.fa-sync{
+    animation: logo-spin infinite 550ms linear;
+}
+
+@keyframes logo-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
