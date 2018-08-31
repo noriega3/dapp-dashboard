@@ -15,6 +15,11 @@
 
 **Note:** it's also responsive!
 
+# TODOs for the future
+
+- Separate the api calls to another file
+- Separate the components outside of App.js to their appropriate names (see [xtract-chat](https://github.com/noriega3/xtract-chat/tree/master/dashboard/src/scripts/components) for a structure example)
+
 # 3rd Party Packages
 
 Packages outside of create-react-app:
