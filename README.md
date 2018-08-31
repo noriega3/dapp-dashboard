@@ -13,7 +13,10 @@
 
 [Live Demo](https://noriega3.github.io/dapp-dashboard/)  
 
-**Note:** it's also responsive!  And you will need the metamask extension to access transactions.[Metamask Extension] (https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn)
+**Note:** it's also responsive!  
+
+You will need the metamask extension to access transactions.
+[Metamask Extension](https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn)
 
 # TODOs for the future
 
